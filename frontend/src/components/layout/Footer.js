@@ -21,7 +21,7 @@ function Footer() {
         <footer className="text-center text-gray-500 text-sm mt-16 mb-6">
 
             <p>
-                SmartSub © 2026{' '}
+                SmartPlan © 2026{' '}
                 <a
                     href="https://github.com/Neeklines"
                     className="text-gray-400 hover:text-white transition"
@@ -58,7 +58,7 @@ function Footer() {
                     <p className="mt-1">
                         Running commit{' '}
                         <a
-                            href={`https://github.com/uni-web-app-pro/commit/${meta.version}`}
+                            href={`https://github.com/student-assistant/commit/${meta.version}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-400 hover:text-gray-300 transition"

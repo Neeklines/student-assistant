@@ -10,7 +10,7 @@ function Navbar() {
                     to="/"
                     className="text-white text-2xl font-semibold tracking-tight"
                 >
-                    SmartSub
+                    SmartPlan
                 </Link>
 
                 {/* Actions */}

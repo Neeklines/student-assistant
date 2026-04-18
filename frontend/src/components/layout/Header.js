@@ -8,7 +8,7 @@ function Header() {
                     to="/"
                     className="text-white text-2xl font-semibold tracking-tight hover:text-gray-300 transition"
                 >
-                    SmartSub
+                    SmartPlan
                 </Link>
             </div>
         </header>

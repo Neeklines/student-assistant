@@ -9,7 +9,6 @@ import Landing from './pages/Landing';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -27,7 +26,7 @@ function App() {
 
       <Route element={<AppLayout />}>
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/chat" element={<NotFound />} />
         </Route>
       </Route>
     </Routes>

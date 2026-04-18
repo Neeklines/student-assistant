@@ -6,30 +6,30 @@ function Landing() {
             <div className="max-w-4xl mx-auto">
                 <div className="rounded-3xl border border-gray-700 bg-gray-950/60 p-10 shadow-xl shadow-black/20">
                     <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-white">
-                        SmartSub
+                        SmartPlan
                     </h1>
                     <p className="mt-4 text-lg sm:text-xl text-gray-300 max-w-3xl">
-                        Zarządzaj swoimi subskrypcjami i stałymi wydatkami w jednym miejscu. SmartSub pomaga kontrolować miesięczne koszty,
-                        śledzić aktywne usługi i planować budżet bez zbędnego stresu.
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                        Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
                     </p>
 
                     <div className="mt-8 grid gap-4 sm:grid-cols-3">
                         <div className="rounded-2xl bg-gray-900/90 p-5 border border-gray-800">
-                            <h2 className="text-xl font-semibold text-white">Wszystko w jednym</h2>
+                            <h2 className="text-xl font-semibold text-white">Lorem ipsum</h2>
                             <p className="mt-2 text-sm text-gray-400">
-                                Przechowuj subskrypcje, opłaty i stałe wydatki w jednym przejrzystym panelu.
+                                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                             </p>
                         </div>
                         <div className="rounded-2xl bg-gray-900/90 p-5 border border-gray-800">
-                            <h2 className="text-xl font-semibold text-white">Śledź wydatki</h2>
+                            <h2 className="text-xl font-semibold text-white">Lorem ipsum</h2>
                             <p className="mt-2 text-sm text-gray-400">
-                                Zobacz, ile wydajesz co miesiąc i które usługi najbardziej obciążają budżet.
+                                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                             </p>
                         </div>
                         <div className="rounded-2xl bg-gray-900/90 p-5 border border-gray-800">
-                            <h2 className="text-xl font-semibold text-white">Bezpieczny start</h2>
+                            <h2 className="text-xl font-semibold text-white">Lorem ipsum</h2>
                             <p className="mt-2 text-sm text-gray-400">
-                                Zaloguj się lub zarejestruj, aby szybko rozpocząć zarządzanie subskrypcjami.
+                                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                             </p>
                         </div>
                     </div>
