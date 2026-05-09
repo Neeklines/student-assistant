@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout';
 import AppLayout from './components/layout/AppLayout';
 import AuthLayout from './components/layout/AuthLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import AgentChat from './components/chat/AgentChat';
 
 import Landing from './pages/Landing';
 import NotFound from './pages/NotFound';
@@ -26,7 +27,7 @@ function App() {
 
       <Route element={<AppLayout />}>
         <Route element={<ProtectedRoute />}>
-          <Route path="/chat" element={<NotFound />} />
+          <Route path="/chat" element={<AgentChat />} />
         </Route>
       </Route>
     </Routes>
