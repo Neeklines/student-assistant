@@ -1,12 +1,16 @@
 const API_URL = 'http://localhost:8000/api/chat/';
 
-export const sendMessageToAgent = async (sessionId, message) => {
+export const sendMessageToAgent = async (sessionId, message, imageFile = null) => {
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    formData.append('message', message);
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+
     const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ session_id: sessionId, message }),
+        body: formData,
     });
 
     if (!response.ok) {
