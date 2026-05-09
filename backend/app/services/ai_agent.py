@@ -7,9 +7,6 @@ from google.genai import types
 
 load_dotenv()
 
-# initialization
-client = genai.Client()
-
 SYSTEM_INSTRUCTION = """
 Jesteś osobistym asystentem studenta ds. produktywności i układania planu dnia.
 Pomagaj ustalać realistyczny harmonogram, uwzględniaj przerwy na jedzenie,
@@ -57,6 +54,7 @@ def get_agent_response(
     db.add(new_user_msg)
     db.commit()
 
+    client = genai.Client()
     chat = client.chats.create(
         model="gemini-2.5-flash",
         config=types.GenerateContentConfig(
