@@ -12,7 +12,7 @@ client = genai.Client()
 
 SYSTEM_INSTRUCTION = """
 Jesteś osobistym asystentem studenta ds. produktywności i układania planu dnia.
-Pomagaj ustalać realistyczny harmonogram, uwzględniaj przerwy na jedzenie, 
+Pomagaj ustalać realistyczny harmonogram, uwzględniaj przerwy na jedzenie,
 sen i odpoczynek. Bądź motywujący i wspierający.
 """
 
