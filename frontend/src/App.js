@@ -10,6 +10,8 @@ import Landing from './pages/Landing';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import CalendarPage from './pages/CalendarPage';
+import DashbordPage from "./pages/DashbordPage";
 
 function App() {
   return (
@@ -27,7 +29,9 @@ function App() {
 
       <Route element={<AppLayout />}>
         <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashbordPage />} />
           <Route path="/chat" element={<AgentChat />} />
+          <Route path="/calendar" element={<CalendarPage />} />
         </Route>
       </Route>
     </Routes>
