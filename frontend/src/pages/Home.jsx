@@ -13,13 +13,6 @@ const STARTER_MESSAGES = [
   { role: "ai", text: "Cześć 👋 Jestem Buddy, Twój asystent AI do nauki. Co masz w planach na ten tydzień?" },
 ];
 
-const STARTER_EVENTS = [
-  { id: "1", title: "Analiza matematyczna — wykład", time: "Pon · 09:00", tag: "Zajęcia" },
-  { id: "2", title: "Nauka: Algebra liniowa", time: "Pon · 16:00", tag: "Focus" },
-  { id: "3", title: "Projekt grupowy — spotkanie", time: "Wt · 18:30", tag: "Spotkanie" },
-  { id: "4", title: "Oddanie szkicu eseju", time: "Pt · 23:59", tag: "Deadline" },
-];
-
 const FEATURES = [
   { icon: MessageCircle, title: "Planowanie przez rozmowę", desc: "Po prostu powiedz Buddy'emu, co Cię czeka — egzaminy, eseje, spotkania koła naukowego — a on ułoży Twój tydzień." },
   { icon: CalendarDays, title: "Synchronizacja kalendarza", desc: "Czyta Twój Google Calendar i sam dopisuje bloki nauki oraz przypomnienia." },
