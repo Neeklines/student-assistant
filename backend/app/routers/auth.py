@@ -4,7 +4,8 @@ from app.database import get_db
 
 from google.oauth2 import id_token
 from google.auth.transport import requests
-import os, uuid
+import os
+import uuid
 
 from app.schemas.user import UserCreate, UserLogin, GoogleToken
 from app.services.auth_service import create_user, authenticate_user
