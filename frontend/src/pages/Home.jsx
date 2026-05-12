@@ -6,6 +6,8 @@ import {
 } from "lucide-react";
 import { Button, Card, Input, Badge, Label, Modal } from "@/components/ui.jsx";
 import heroImg from "@/assets/hero-ai-student.jpg";
+import { useAuth } from "@/context/AuthContext.jsx";
+import * as calendarService from "@/services/calendarService.js";
 
 const STARTER_MESSAGES = [
   { role: "ai", text: "Cześć 👋 Jestem Buddy, Twój asystent AI do nauki. Co masz w planach na ten tydzień?" },
@@ -26,6 +28,20 @@ const FEATURES = [
   { icon: GraduationCap, title: "Stworzone dla studentów", desc: "Rozumie semestry, sylabusy i chaos projektów grupowych." },
   { icon: Sparkles, title: "Codzienne check-iny", desc: "Poranne podsumowanie i wieczorny przegląd, żeby utrzymać tempo." },
 ];
+
+const EVENT_TIME_FORMATTER = new Intl.DateTimeFormat("pl-PL", {
+  weekday: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function formatEventTime(isoString) {
+  try {
+    return EVENT_TIME_FORMATTER.format(new Date(isoString));
+  } catch {
+    return isoString;
+  }
+}
 
 function Hero({ onAuth }) {
   return (
@@ -67,7 +83,7 @@ function Hero({ onAuth }) {
   );
 }
 
-function ChatPanel() {
+function ChatPanel({ onRequireAuth }) {
   const [messages, setMessages] = useState(STARTER_MESSAGES);
   const [input, setInput] = useState("");
   const scrollRef = useRef(null);
@@ -76,12 +92,7 @@ function ChatPanel() {
   }, [messages]);
   const send = () => {
     if (!input.trim()) return;
-    const userText = input.trim();
-    setMessages((m) => [...m, { role: "user", text: userText }]);
-    setInput("");
-    setTimeout(() => {
-      setMessages((m) => [...m, { role: "ai", text: `Jasne — „${userText}". Zarezerwuję 2 sesje focusu w tym tygodniu i dodam przypomnienie wieczorem dzień wcześniej.` }]);
-    }, 700);
+    onRequireAuth();
   };
   return (
     <Card className="flex h-[520px] flex-col overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
@@ -104,7 +115,7 @@ function ChatPanel() {
         ))}
       </div>
       <div className="flex gap-2 border-t border-border p-3">
-        <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Opowiedz Buddy'emu o swoim tygodniu…" />
+        <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Zaloguj się, by porozmawiać z Buddym…" />
         <Button onClick={send} size="icon" style={{ background: "var(--gradient-hero)", color: "white" }}>
           <Send className="h-4 w-4" />
         </Button>
@@ -114,14 +125,48 @@ function ChatPanel() {
 }
 
 function CalendarPanel() {
-  const [events, setEvents] = useState(STARTER_EVENTS);
+  const { token } = useAuth();
+  const [events, setEvents] = useState([]);
   const [title, setTitle] = useState("");
-  const [time, setTime] = useState("");
-  const add = () => {
-    if (!title.trim() || !time.trim()) return;
-    setEvents((e) => [...e, { id: crypto.randomUUID(), title, time, tag: "Custom" }]);
-    setTitle(""); setTime("");
+  const [startTime, setStartTime] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!token) {
+      setEvents([]);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    calendarService.getEvents(token)
+      .then((data) => { if (!cancelled) setEvents(data); })
+      .catch((e) => { if (!cancelled) setError(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [token]);
+
+  const add = async () => {
+    if (!title.trim() || !startTime.trim()) return;
+    if (!token) { setError("Zaloguj się, by dodać wydarzenie"); return; }
+    setError(null);
+    try {
+      const start = new Date(startTime);
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      const created = await calendarService.createEvent(token, {
+        title,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        event_type: "Custom",
+      });
+      setEvents((e) => [...e, created]);
+      setTitle("");
+      setStartTime("");
+    } catch (e) {
+      setError(e.message);
+    }
   };
+
   return (
     <Card className="flex h-[520px] flex-col overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
       <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-5 py-4">
@@ -131,12 +176,21 @@ function CalendarPanel() {
           </div>
           <div>
             <p className="text-sm font-semibold text-foreground">Ten tydzień</p>
-            <p className="text-xs text-muted-foreground">{events.length} zaplanowanych pozycji</p>
+            <p className="text-xs text-muted-foreground">
+              {token ? `${events.length} zaplanowanych pozycji` : "Zaloguj się, by zobaczyć kalendarz"}
+            </p>
           </div>
         </div>
         <Bell className="h-4 w-4 text-muted-foreground" />
       </div>
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
+        {loading && <p className="text-sm text-muted-foreground">Ładowanie…</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {!loading && !error && events.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {token ? "Brak wydarzeń. Dodaj pierwsze poniżej." : "Zaloguj się, by zobaczyć swoje wydarzenia."}
+          </p>
+        )}
         {events.map((e) => (
           <div key={e.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/40">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
@@ -144,16 +198,16 @@ function CalendarPanel() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-foreground">{e.title}</p>
-              <p className="text-xs text-muted-foreground">{e.time}</p>
+              <p className="text-xs text-muted-foreground">{formatEventTime(e.start_time)}</p>
             </div>
-            <Badge variant="secondary">{e.tag}</Badge>
+            <Badge variant="secondary">{e.event_type || "—"}</Badge>
           </div>
         ))}
       </div>
       <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-t border-border p-3">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nowe wydarzenie…" />
-        <Input value={time} onChange={(e) => setTime(e.target.value)} placeholder="Śr · 14:00" className="w-32" />
-        <Button onClick={add} size="icon" variant="outline">
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nowe wydarzenie…" disabled={!token} />
+        <Input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-44" disabled={!token} />
+        <Button onClick={add} size="icon" variant="outline" disabled={!token}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -162,7 +216,41 @@ function CalendarPanel() {
 }
 
 function AuthDialog({ mode, onClose, onSwitch, onSuccess }) {
+  const { login, register } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setEmail("");
+    setPassword("");
+    setName("");
+    setError(null);
+    setSubmitting(false);
+  }, [mode]);
+
   if (!mode) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      if (mode === "login") {
+        await login(email, password);
+      } else {
+        await register(email, password);
+      }
+      onSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Modal open={!!mode} onClose={onClose}>
       <div className="mb-4 flex items-center gap-2">
@@ -173,26 +261,27 @@ function AuthDialog({ mode, onClose, onSwitch, onSuccess }) {
       </div>
       <p className="mb-4 text-sm text-muted-foreground">Zaloguj się lub załóż konto, by przejść do swojego pulpitu.</p>
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-secondary p-1">
-        <button onClick={() => onSwitch("login")} className={`rounded-lg py-2 text-sm font-medium ${mode === "login" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Logowanie</button>
-        <button onClick={() => onSwitch("register")} className={`rounded-lg py-2 text-sm font-medium ${mode === "register" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Rejestracja</button>
+        <button type="button" onClick={() => onSwitch("login")} className={`rounded-lg py-2 text-sm font-medium ${mode === "login" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Logowanie</button>
+        <button type="button" onClick={() => onSwitch("register")} className={`rounded-lg py-2 text-sm font-medium ${mode === "register" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Rejestracja</button>
       </div>
-      <form onSubmit={(e) => { e.preventDefault(); onSuccess(); }} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-3">
         {mode === "register" && (
           <div className="space-y-1.5">
             <Label htmlFor="name">Imię</Label>
-            <Input id="name" placeholder="Jan" required />
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jan" />
           </div>
         )}
         <div className="space-y-1.5">
           <Label htmlFor="email">E-mail</Label>
-          <Input id="email" type="email" placeholder="ty@uczelnia.pl" required />
+          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ty@uczelnia.pl" required />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pass">Hasło</Label>
-          <Input id="pass" type="password" placeholder="••••••••" required />
+          <Input id="pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
         </div>
-        <Button type="submit" className="w-full" style={{ background: "var(--gradient-hero)", color: "white" }}>
-          {mode === "login" ? "Zaloguj się" : "Załóż konto"}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <Button type="submit" disabled={submitting} className="w-full" style={{ background: "var(--gradient-hero)", color: "white" }}>
+          {submitting ? "Pracuję…" : mode === "login" ? "Zaloguj się" : "Załóż konto"}
         </Button>
       </form>
     </Modal>
@@ -233,7 +322,7 @@ export default function Home() {
             <p className="mt-3 text-muted-foreground">Buddy słucha, co masz na głowie, i zamienia to w konkretne wpisy w kalendarzu.</p>
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
-            <ChatPanel />
+            <ChatPanel onRequireAuth={() => setAuthMode("login")} />
             <CalendarPanel />
           </div>
         </section>
