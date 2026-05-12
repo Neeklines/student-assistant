@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.routers import health, auth, meta, calendar, chat
 
-
 app = FastAPI()
 
 # CORS configuration to allow requests from the React frontend
