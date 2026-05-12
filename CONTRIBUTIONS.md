@@ -64,8 +64,8 @@ Examples:
 
 ## 📁 Important Concepts
 
-* Backend = `frontend/`
-* Frontend = `backend/`
+* Frontend = `frontend/`
+* Backend = `backend/`
 * API = contract between them → don’t break it casually
 
 ---
