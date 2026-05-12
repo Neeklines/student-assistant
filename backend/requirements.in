@@ -17,3 +17,5 @@ pytest
 httpx
 black
 flake8
+google-auth
+requests
