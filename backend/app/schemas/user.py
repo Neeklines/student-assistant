@@ -9,3 +9,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+
+class GoogleToken(BaseModel):
+    credential: str

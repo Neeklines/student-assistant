@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { loginSchema, registerSchema } from '../../validation/authSchemas';
+import { GoogleLogin } from '@react-oauth/google';
 
 function AuthForm({ type, onSubmit, error, loading, showLoader, onResetError }) {
     const [email, setEmail] = useState('');
@@ -66,6 +67,47 @@ function AuthForm({ type, onSubmit, error, loading, showLoader, onResetError }) 
                 >
                     {showLoader ? 'Ładowanie...' : type === 'login' ? 'Zaloguj się' : 'Zarejestruj się'}
                 </button>
+
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                    <GoogleLogin
+                        onSuccess={async (credentialResponse) => {
+                            console.log("Token od Google zdobyty, wysyłam na backend...");
+
+                            try {
+                                const response = await fetch("http://localhost:8000/api/auth/google-login", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        credential: credentialResponse.credential,
+                                    }),
+                                });
+
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    console.log("Zalogowano pomyślnie!", data);
+
+
+                                    localStorage.setItem('token', data.access_token);
+
+                                    window.location.href = '/';
+
+                                } else {
+                                    const errorData = await response.json();
+                                    console.error("Błąd podczas logowania na backendzie:", errorData);
+                                    alert("Nie udało się zalogować przez Google. Spróbuj ponownie.");
+                                }
+                            } catch (error) {
+                                console.error("Błąd połączenia z serwerem:", error);
+                                alert("Błąd połączenia z serwerem.");
+                            }
+                        }}
+                        onError={() => {
+                            console.log("Logowanie Google zablokowane lub przerwane przez użytkownika");
+                        }}
+                    />
+                </div>
             </form>
 
             {/* Validation error */}
