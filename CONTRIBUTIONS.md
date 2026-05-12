@@ -352,18 +352,18 @@ Follow these steps to run the project locally.
 
 ---
 
-## ⚛️ Frontend (React)
+## ⚛️ Frontend (React + Vite + Bun)
 
 ```bash
-cd client
-npm install
-npm start
+cd frontend
+bun install
+bun run dev
 ```
 
 Frontend will run at:
 
 ```
-http://localhost:3000
+http://localhost:5173
 ```
 
 ---
@@ -371,7 +371,7 @@ http://localhost:3000
 ## 🔗 Backend (FastAPI)
 
 ```bash
-cd server
+cd backend
 python -m venv venv
 ```
 
