@@ -13,7 +13,7 @@ export function resetSessionId() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
-export async function sendMessage(sessionId, message, imageFile) {
+export async function sendMessage(token, sessionId, message, imageFile) {
   const formData = new FormData();
   formData.append("session_id", sessionId);
   formData.append("message", message);
@@ -23,6 +23,7 @@ export async function sendMessage(sessionId, message, imageFile) {
 
   const response = await fetch("/api/chat/", {
     method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
 

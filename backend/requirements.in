@@ -7,7 +7,7 @@ pymysql
 passlib[argon2]
 python-jose[cryptography]
 python-dotenv
-google-genai
+openai
 python-multipart
 
 # devtools
