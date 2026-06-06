@@ -1,11 +1,13 @@
+import base64
 from typing import Optional
 from sqlalchemy.orm import Session
-from app.models.chat import ChatMessage
+from openai import OpenAI
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
+from app.models.chat import ChatMessage
 
 load_dotenv()
+
+MODEL = "gpt-4o-mini"
 
 SYSTEM_INSTRUCTION = """
 Jesteś osobistym asystentem studenta ds. produktywności i układania planu dnia.
@@ -14,63 +16,79 @@ sen i odpoczynek. Bądź motywujący i wspierający.
 """
 
 
+def _build_user_content(
+    text: str, image_bytes: Optional[bytes], image_mime_type: Optional[str]
+):
+    """Multimodal user message: text + optional image as data URL."""
+    if not image_bytes:
+        return text or ""
+
+    mime = image_mime_type or "image/jpeg"
+    b64 = base64.b64encode(image_bytes).decode("ascii")
+    parts = []
+    if text:
+        parts.append({"type": "text", "text": text})
+    parts.append(
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:{mime};base64,{b64}"},
+        }
+    )
+    return parts
+
+
 def get_agent_response(
+    user_id: int,
     session_id: str,
     user_text: str,
     db: Session,
     image_bytes: Optional[bytes] = None,
     image_mime_type: Optional[str] = None,
 ) -> str:
-    # getting history from db
-    db_messages = (
+    history_rows = (
         db.query(ChatMessage)
-        .filter(ChatMessage.session_id == session_id)
+        .filter(
+            ChatMessage.user_id == user_id,
+            ChatMessage.session_id == session_id,
+        )
         .order_by(ChatMessage.id)
         .all()
     )
 
-    formatted_history = []
-    for msg in db_messages:
-        formatted_history.append(
-            types.Content(role=msg.role, parts=[types.Part.from_text(text=msg.content)])
-        )
+    messages = [{"role": "system", "content": SYSTEM_INSTRUCTION.strip()}]
+    for row in history_rows:
+        messages.append({"role": row.role, "content": row.content})
 
-    # build parts for current message
-    parts = []
-    if user_text:
-        parts.append(types.Part.from_text(text=user_text))
-    if image_bytes:
-        parts.append(
-            types.Part.from_bytes(
-                data=image_bytes, mime_type=image_mime_type or "image/jpeg"
-            )
-        )
-
-    # saving of req (store text only; images are not persisted)
-    stored_content = user_text if user_text else "[image]"
-    new_user_msg = ChatMessage(
-        session_id=session_id, role="user", content=stored_content
+    messages.append(
+        {
+            "role": "user",
+            "content": _build_user_content(user_text, image_bytes, image_mime_type),
+        }
     )
-    db.add(new_user_msg)
+
+    stored_user = user_text if user_text else "[image]"
+    db.add(
+        ChatMessage(
+            user_id=user_id,
+            session_id=session_id,
+            role="user",
+            content=stored_user,
+        )
+    )
     db.commit()
 
-    client = genai.Client()
-    chat = client.chats.create(
-        model="gemini-2.5-flash",
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_INSTRUCTION,
-        ),
-        history=formatted_history,
-    )
+    client = OpenAI()
+    completion = client.chat.completions.create(model=MODEL, messages=messages)
+    reply = completion.choices[0].message.content or ""
 
-    # message sending
-    response = chat.send_message(parts)
-
-    # saving of response
-    new_agent_msg = ChatMessage(
-        session_id=session_id, role="model", content=response.text
+    db.add(
+        ChatMessage(
+            user_id=user_id,
+            session_id=session_id,
+            role="assistant",
+            content=reply,
+        )
     )
-    db.add(new_agent_msg)
     db.commit()
 
-    return response.text
+    return reply
