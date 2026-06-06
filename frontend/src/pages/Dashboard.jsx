@@ -2,11 +2,15 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles, CalendarDays, Send, Plus, Bell, Clock, GraduationCap, LogOut, Home as HomeIcon,
+  Paperclip, X,
 } from "lucide-react";
 import { Button, Card, Input, Badge } from "@/components/ui.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as chatService from "@/services/chatService.js";
 import * as calendarService from "@/services/calendarService.js";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const EVENT_TIME_FORMATTER = new Intl.DateTimeFormat("pl-PL", {
   weekday: "short",
@@ -32,6 +36,8 @@ export default function Dashboard() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -40,6 +46,36 @@ export default function Dashboard() {
   const [startTime, setStartTime] = useState("");
 
   const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(imageFile);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+
+  const pickImage = (file) => {
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setChatError("Dozwolone formaty: JPEG, PNG, WebP.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setChatError("Obraz jest większy niż 5MB.");
+      return;
+    }
+    setChatError(null);
+    setImageFile(file);
+  };
+
+  const clearImage = () => {
+    setImageFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -57,15 +93,28 @@ export default function Dashboard() {
   }, [token]);
 
   const send = async () => {
-    if (!input.trim() || sending) return;
+    if (sending) return;
     const userText = input.trim();
-    setMessages((m) => [...m, { role: "user", text: userText }]);
+    if (!userText && !imageFile) return;
+    const attachedImage = imageFile;
+    const attachedPreview = imagePreview;
+    setMessages((m) => [
+      ...m,
+      { role: "user", text: userText, imageUrl: attachedPreview },
+    ]);
     setInput("");
+    setImageFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setSending(true);
     setChatError(null);
     try {
       const sessionId = chatService.getOrCreateSessionId();
-      const { response } = await chatService.sendMessage(sessionId, userText);
+      const { response } = await chatService.sendMessage(
+        token,
+        sessionId,
+        userText,
+        attachedImage,
+      );
       setMessages((m) => [...m, { role: "ai", text: response }]);
     } catch (e) {
       setChatError(e.message);
@@ -143,15 +192,51 @@ export default function Dashboard() {
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-5">
               {messages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary text-secondary-foreground rounded-bl-sm"}`}>{m.text}</div>
+                  <div className={`max-w-[80%] space-y-2 rounded-2xl px-4 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary text-secondary-foreground rounded-bl-sm"}`}>
+                    {m.imageUrl && (
+                      <img src={m.imageUrl} alt="Załącznik" className="max-h-48 rounded-lg object-cover" />
+                    )}
+                    {m.text && <div>{m.text}</div>}
+                  </div>
                 </div>
               ))}
               {sending && <p className="text-xs text-muted-foreground">Buddy pisze…</p>}
               {chatError && <p className="text-xs text-red-600">{chatError}</p>}
             </div>
-            <div className="flex gap-2 border-t border-border p-3">
-              <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Napisz do Buddy'ego…" disabled={sending} />
-              <Button onClick={send} disabled={sending} size="icon" style={{ background: "var(--gradient-hero)", color: "white" }}><Send className="h-4 w-4" /></Button>
+            <div className="space-y-2 border-t border-border p-3">
+              {imagePreview && (
+                <div className="relative inline-block">
+                  <img src={imagePreview} alt="Podgląd" className="h-20 w-20 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={clearImage}
+                    className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background shadow"
+                    aria-label="Usuń obraz"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => pickImage(e.target.files?.[0])}
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={sending}
+                  size="icon"
+                  variant="outline"
+                  aria-label="Dodaj obraz"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Napisz do Buddy'ego…" disabled={sending} />
+                <Button onClick={send} disabled={sending} size="icon" style={{ background: "var(--gradient-hero)", color: "white" }}><Send className="h-4 w-4" /></Button>
+              </div>
             </div>
           </Card>
 
