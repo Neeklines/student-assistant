@@ -10,6 +10,9 @@ from app.models.user import User
 
 router = APIRouter(prefix="/chat", tags=["Chat AI"])
 
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+ALLOWED_IMAGE_MIME = {"image/jpeg", "image/png", "image/webp"}
+
 
 @router.post("/", response_model=ChatResponse)
 async def chat_with_ai(
@@ -22,7 +25,17 @@ async def chat_with_ai(
     image_bytes = None
     image_mime_type = None
     if image and image.filename:
+        if image.content_type not in ALLOWED_IMAGE_MIME:
+            raise HTTPException(
+                status_code=415,
+                detail="Unsupported image type. Allowed: JPEG, PNG, WebP.",
+            )
         image_bytes = await image.read()
+        if len(image_bytes) > MAX_IMAGE_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="Image too large. Max size is 5MB.",
+            )
         image_mime_type = image.content_type
 
     try:
@@ -30,5 +43,7 @@ async def chat_with_ai(
             current_user.id, session_id, message, db, image_bytes, image_mime_type
         )
         return ChatResponse(response=reply)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -77,6 +77,32 @@ def test_chat_with_image(client, db):
         assert image_part["image_url"]["url"].startswith("data:image/png;base64,")
 
 
+def test_chat_rejects_unsupported_image_type(client):
+    token = _register_and_login(client, email="pdf@test.com")
+
+    response = client.post(
+        "/api/chat/",
+        data={"session_id": "s3", "message": "see attached"},
+        files={"image": ("doc.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 415
+
+
+def test_chat_rejects_oversized_image(client):
+    token = _register_and_login(client, email="big@test.com")
+    # 5MB + 1 byte
+    oversized = b"\x89PNG\r\n\x1a\n" + b"\x00" * (5 * 1024 * 1024 + 1)
+
+    response = client.post(
+        "/api/chat/",
+        data={"session_id": "s4", "message": "huge"},
+        files={"image": ("big.png", io.BytesIO(oversized), "image/png")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 413
+
+
 def test_chat_history_isolated_per_user(client, db):
     token_a = _register_and_login(client, email="a@test.com")
     token_b = _register_and_login(client, email="b@test.com")
