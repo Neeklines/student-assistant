@@ -116,6 +116,13 @@ export default function Dashboard() {
         attachedImage,
       );
       setMessages((m) => [...m, { role: "ai", text: response }]);
+      // Buddy may have created/updated/deleted events via tool calling — refresh.
+      try {
+        const fresh = await calendarService.getEvents(token);
+        setEvents(fresh);
+      } catch {
+        // Non-fatal: chat reply already shown.
+      }
     } catch (e) {
       setChatError(e.message);
       setMessages((m) => [...m, { role: "ai", text: `Błąd: ${e.message}` }]);

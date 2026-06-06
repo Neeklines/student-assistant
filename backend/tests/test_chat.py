@@ -1,13 +1,24 @@
 import io
+import json
 from unittest.mock import patch, MagicMock
 
+from app.models.calendar_event import CalendarEvent
 from app.models.chat import ChatMessage
 
 
-def _mock_completion(text: str):
+def _mock_completion(text: str, tool_calls=None):
     completion = MagicMock()
-    completion.choices = [MagicMock(message=MagicMock(content=text))]
+    message = MagicMock(content=text, tool_calls=tool_calls)
+    completion.choices = [MagicMock(message=message)]
     return completion
+
+
+def _tool_call(name: str, arguments: dict, call_id: str = "call_1"):
+    tc = MagicMock()
+    tc.id = call_id
+    tc.function = MagicMock(name=name, arguments=json.dumps(arguments))
+    tc.function.name = name
+    return tc
 
 
 def _register_and_login(client, email="chat@test.com", password="secret"):
@@ -77,6 +88,32 @@ def test_chat_with_image(client, db):
         assert image_part["image_url"]["url"].startswith("data:image/png;base64,")
 
 
+def test_chat_rejects_unsupported_image_type(client):
+    token = _register_and_login(client, email="pdf@test.com")
+
+    response = client.post(
+        "/api/chat/",
+        data={"session_id": "s3", "message": "see attached"},
+        files={"image": ("doc.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 415
+
+
+def test_chat_rejects_oversized_image(client):
+    token = _register_and_login(client, email="big@test.com")
+    # 5MB + 1 byte
+    oversized = b"\x89PNG\r\n\x1a\n" + b"\x00" * (5 * 1024 * 1024 + 1)
+
+    response = client.post(
+        "/api/chat/",
+        data={"session_id": "s4", "message": "huge"},
+        files={"image": ("big.png", io.BytesIO(oversized), "image/png")},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 413
+
+
 def test_chat_history_isolated_per_user(client, db):
     token_a = _register_and_login(client, email="a@test.com")
     token_b = _register_and_login(client, email="b@test.com")
@@ -107,3 +144,82 @@ def test_chat_history_isolated_per_user(client, db):
         )
         assert "user A secret" not in history_text
         assert "user B secret" in history_text
+
+
+def test_chat_tool_call_creates_calendar_event(client, db):
+    """Model asks to create an event, gets the tool result, then replies in text."""
+    token = _register_and_login(client, email="tools@test.com")
+
+    create_args = {
+        "title": "Algebra study block",
+        "start_time": "2026-06-08T09:00:00",
+        "end_time": "2026-06-08T10:30:00",
+        "event_type": "study",
+        "priority": "high",
+    }
+
+    with patch("app.services.ai_agent.OpenAI") as openai_cls:
+        instance = openai_cls.return_value
+        instance.chat.completions.create.side_effect = [
+            _mock_completion(
+                text="", tool_calls=[_tool_call("create_event", create_args)]
+            ),
+            _mock_completion(text="Dodałem blok nauki algebry na poniedziałek."),
+        ]
+
+        response = client.post(
+            "/api/chat/",
+            data={"session_id": "tool1", "message": "Zaplanuj mi naukę algebry"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    assert "algebry" in response.json()["response"]
+
+    # Event landed in DB and is attributed to AI
+    events = db.query(CalendarEvent).all()
+    assert len(events) == 1
+    assert events[0].title == "Algebra study block"
+    assert events[0].created_by == "ai"
+
+    # Two OpenAI calls: first with no tool reply, second with tool message in history
+    second_call_messages = instance.chat.completions.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    assert any(m.get("role") == "tool" for m in second_call_messages)
+
+
+def test_chat_tool_error_does_not_crash(client, db):
+    """If a tool raises, the error string is fed back to the model."""
+    token = _register_and_login(client, email="err@test.com")
+
+    bad_args = {
+        "title": "Backwards event",
+        "start_time": "2026-06-08T15:00:00",
+        "end_time": "2026-06-08T09:00:00",  # before start_time
+    }
+
+    with patch("app.services.ai_agent.OpenAI") as openai_cls:
+        instance = openai_cls.return_value
+        instance.chat.completions.create.side_effect = [
+            _mock_completion(
+                text="", tool_calls=[_tool_call("create_event", bad_args)]
+            ),
+            _mock_completion(text="Nie udało się dodać — koniec przed początkiem."),
+        ]
+
+        response = client.post(
+            "/api/chat/",
+            data={"session_id": "tool2", "message": "Dodaj coś"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    assert db.query(CalendarEvent).count() == 0
+
+    # The error was passed back to the model as a tool message
+    second_call_messages = instance.chat.completions.create.call_args_list[1].kwargs[
+        "messages"
+    ]
+    tool_msg = next(m for m in second_call_messages if m.get("role") == "tool")
+    assert "end_time must be after start_time" in tool_msg["content"]
