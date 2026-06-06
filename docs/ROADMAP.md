@@ -6,15 +6,6 @@ Stan na 2026-06-06. Co już zostało zrobione: [SCOPE.md](../SCOPE.md).
 
 ## Priorytet wysoki
 
-- [ ] **Integracja AI ↔ kalendarz (OpenAI tool calling).**
-  Dziś chatbot ma świetny system prompt, ale nie zna zawartości kalendarza. Cel: dać agentowi
-  tool-callable funkcje `list_events(date_range)`, `create_event(...)`, `update_event(id, ...)`,
-  `delete_event(id)`. Wtedy Buddy realizuje cel projektu — układa plan dnia na podstawie istniejących
-  wydarzeń i sam dopisuje bloki nauki. Punkt wejścia:
-  [backend/app/services/ai_agent.py](../backend/app/services/ai_agent.py),
-  [backend/app/routers/chat.py](../backend/app/routers/chat.py)
-  (przekazać `db` + `user_id` do toolsów, ich wywołania zapisują eventy przez `CalendarEvent`).
-
 - [ ] **Widok kalendarza dzień / tydzień / miesiąc.**
   Aktualnie Dashboard pokazuje płaską listę. Trzeba dodać przełącznik perspektywy + komponent
   siatki tygodniowej i miesięcznej. Sugerowane biblioteki: `@fullcalendar/react` lub własna siatka
