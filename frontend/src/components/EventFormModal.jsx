@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Input, Label, Modal } from "@/components/ui.jsx";
-
-const EVENT_TYPES = ["lecture", "study", "exam", "deadline", "break", "custom"];
+import { EVENT_TYPE_META, EVENT_TYPE_VALUES } from "@/lib/eventTypes.js";
 
 function pad(n) { return String(n).padStart(2, "0"); }
 
@@ -160,8 +159,8 @@ export default function EventFormModal({ open, mode, initialEvent, onSubmit, onC
             onChange={update("event_type")}
             className="flex h-10 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/50"
           >
-            {EVENT_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
+            {EVENT_TYPE_VALUES.map((t) => (
+              <option key={t} value={t}>{EVENT_TYPE_META[t].label}</option>
             ))}
           </select>
         </div>
