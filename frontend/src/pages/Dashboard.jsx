@@ -1,32 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Sparkles, CalendarDays, Send, Plus, Bell, GraduationCap, LogOut, Home as HomeIcon,
-  Paperclip, X, Pencil, Trash2,
+  Sparkles, Send, Plus, GraduationCap, LogOut, Home as HomeIcon,
+  Paperclip, X,
 } from "lucide-react";
 import { Button, Card, Input, ConfirmDialog } from "@/components/ui.jsx";
-import { getEventTypeMeta } from "@/lib/eventTypes.js";
 import EventFormModal from "@/components/EventFormModal.jsx";
+import CalendarView from "@/components/CalendarView.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as chatService from "@/services/chatService.js";
 import * as calendarService from "@/services/calendarService.js";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-const EVENT_TIME_FORMATTER = new Intl.DateTimeFormat("pl-PL", {
-  weekday: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function formatEventTime(isoString) {
-  try {
-    return EVENT_TIME_FORMATTER.format(new Date(isoString));
-  } catch {
-    return isoString;
-  }
-}
 
 export default function Dashboard() {
   const { user, token, logout } = useAuth();
@@ -265,64 +251,20 @@ export default function Dashboard() {
           </Card>
 
           <Card className="flex h-[560px] flex-col overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
-            <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-5 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent">
-                  <CalendarDays className="h-4 w-4 text-accent-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Twój kalendarz</p>
-                  <p className="text-xs text-muted-foreground">{events.length} pozycji</p>
-                </div>
+            {eventsLoading && (
+              <p className="px-5 py-3 text-sm text-muted-foreground">Ładowanie…</p>
+            )}
+            {eventsError && (
+              <p className="px-5 py-3 text-sm text-red-600">{eventsError}</p>
+            )}
+            {!eventsLoading && !eventsError && (
+              <div className="flex flex-1 flex-col overflow-hidden">
+                <CalendarView
+                  events={events}
+                  onEditEvent={(e) => { setEditingEvent(e); setModalMode("edit"); }}
+                />
               </div>
-              <Bell className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <div className="flex-1 space-y-2 overflow-y-auto p-4">
-              {eventsLoading && <p className="text-sm text-muted-foreground">Ładowanie…</p>}
-              {eventsError && <p className="text-sm text-red-600">{eventsError}</p>}
-              {!eventsLoading && !eventsError && events.length === 0 && (
-                <p className="text-sm text-muted-foreground">Brak wydarzeń. Dodaj pierwsze poniżej.</p>
-              )}
-              {events.map((e) => {
-                const meta = getEventTypeMeta(e.event_type);
-                const Icon = meta.Icon;
-                return (
-                  <div
-                    key={e.id}
-                    className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 hover:border-primary/40"
-                  >
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${meta.iconClass}`}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{e.title}</p>
-                      <p className="text-xs text-muted-foreground">{formatEventTime(e.start_time)}</p>
-                    </div>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.badgeClass}`}>
-                      {meta.label}
-                    </span>
-                    <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={() => { setEditingEvent(e); setModalMode("edit"); }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        aria-label={`Edytuj ${e.title}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setDeletingEvent(e); setDeleteError(null); }}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                        aria-label={`Usuń ${e.title}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            )}
             <div className="border-t border-border p-3">
               <Button
                 onClick={() => { setEditingEvent(null); setModalMode("create"); }}
