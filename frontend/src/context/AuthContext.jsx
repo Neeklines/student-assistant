@@ -42,6 +42,14 @@ export function AuthProvider({ children }) {
     setUser(me);
   }, []);
 
+  const googleLogin = useCallback(async (credential) => {
+    const { access_token } = await authService.googleLogin(credential);
+    localStorage.setItem(TOKEN_KEY, access_token);
+    setToken(access_token);
+    const me = await authService.getMe(access_token);
+    setUser(me);
+  }, []);
+
   const register = useCallback(async (email, password) => {
     await authService.register(email, password);
     const { access_token } = await authService.login(email, password);
@@ -59,7 +67,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, loading, login, register, googleLogin, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -8,7 +8,7 @@ import os
 import uuid
 
 from app.schemas.user import UserCreate, UserLogin, GoogleToken
-from app.services.auth_service import create_user, authenticate_user
+from app.services.auth_service import create_user, authenticate_user, hash_password
 from app.core.security import create_access_token
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -46,11 +46,18 @@ async def google_login(token_data: GoogleToken, db: Session = Depends(get_db)):
     try:
         # Weryfikacja tokenu Google
         client_id = os.getenv("GOOGLE_CLIENT_ID")
+        if not client_id:
+            raise HTTPException(
+                status_code=500,
+                detail="Google OAuth is not configured.",
+            )
         idinfo = id_token.verify_oauth2_token(
             token_data.credential, requests.Request(), client_id
         )
 
         email = idinfo.get("email")
+        if not email:
+            raise HTTPException(status_code=401, detail="Google token has no email")
 
         user = db.query(User).filter(User.email == email).first()
 
@@ -58,7 +65,7 @@ async def google_login(token_data: GoogleToken, db: Session = Depends(get_db)):
 
             random_password = f"google_oauth_{uuid.uuid4()}"
 
-            new_user = User(email=email, password=random_password)
+            new_user = User(email=email, password=hash_password(random_password))
 
             db.add(new_user)
             db.commit()
