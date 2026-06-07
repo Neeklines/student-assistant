@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui.jsx";
+import DayView from "@/components/calendar/DayView.jsx";
 import {
   startOfWeek,
   endOfWeek,
@@ -114,27 +115,28 @@ export default function CalendarView({ events, onEditEvent }) {
         ))}
       </div>
 
-      {/* Body: placeholder until Tasks C-E land */}
-      <div className="flex-1 overflow-auto p-4">
-        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          <p>Widok: <strong>{perspective}</strong></p>
-          <p className="mt-1">Wydarzeń w zakresie: <strong>{visibleEvents.length}</strong></p>
-          <p className="mt-3 text-xs">
-            Komponenty <code>DayView</code>, <code>WeekView</code>, <code>MonthView</code> dojadą w następnych commitach.
-            Klik w event będzie wołać <code>onEditEvent</code>.
-          </p>
-          {/* Demo button so reviewers can confirm the wire-up; remove in Task C. */}
-          {visibleEvents.length > 0 && (
-            <button
-              type="button"
-              onClick={() => onEditEvent(visibleEvents[0])}
-              className="mt-3 text-xs text-primary underline"
-            >
-              (test) Otwórz edycję pierwszego eventu w zakresie
-            </button>
-          )}
+      {/* Body */}
+      {perspective === "day" && (
+        <DayView events={events} currentDate={currentDate} onEditEvent={onEditEvent} />
+      )}
+      {perspective === "week" && (
+        <div className="flex-1 overflow-auto p-4">
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            <p><strong>Tydzień</strong></p>
+            <p className="mt-1">Wydarzeń w zakresie: <strong>{visibleEvents.length}</strong></p>
+            <p className="mt-3 text-xs">WeekView dojedzie w kolejnym commicie (Task D).</p>
+          </div>
         </div>
-      </div>
+      )}
+      {perspective === "month" && (
+        <div className="flex-1 overflow-auto p-4">
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            <p><strong>Miesiąc</strong></p>
+            <p className="mt-1">Wydarzeń w zakresie: <strong>{visibleEvents.length}</strong></p>
+            <p className="mt-3 text-xs">MonthView dojedzie w kolejnym commicie (Task E).</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
