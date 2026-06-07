@@ -1,3 +1,4 @@
+import { useEffect, useId } from "react";
 import { cn } from "@/lib/utils";
 
 export function Button({ className, variant = "default", size = "md", style, ...props }) {
@@ -72,7 +73,16 @@ export function Badge({ className, variant = "default", ...props }) {
   );
 }
 
-export function Modal({ open, onClose, children }) {
+export function Modal({ open, onClose, children, labelledBy }) {
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div
@@ -80,11 +90,53 @@ export function Modal({ open, onClose, children }) {
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
         className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {children}
       </div>
     </div>
+  );
+}
+
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel = "Potwierdź",
+  cancelLabel = "Anuluj",
+  confirmVariant = "default",
+  pending = false,
+  error = null,
+  onConfirm,
+  onCancel,
+}) {
+  const titleId = useId();
+  return (
+    <Modal open={open} onClose={pending ? undefined : onCancel} labelledBy={titleId}>
+      <h2 id={titleId} className="text-lg font-semibold text-foreground">{title}</h2>
+      {description && (
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+      )}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>
+      )}
+      <div className="mt-5 flex justify-end gap-2">
+        <Button variant="ghost" onClick={onCancel} disabled={pending}>
+          {cancelLabel}
+        </Button>
+        <Button
+          variant={confirmVariant === "danger" ? "default" : confirmVariant}
+          className={confirmVariant === "danger" ? "bg-red-600 text-white hover:bg-red-700" : undefined}
+          onClick={onConfirm}
+          disabled={pending}
+        >
+          {pending ? "..." : confirmLabel}
+        </Button>
+      </div>
+    </Modal>
   );
 }

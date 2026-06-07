@@ -2,9 +2,10 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles, CalendarDays, Send, Plus, Bell, Clock, GraduationCap, LogOut, Home as HomeIcon,
-  Paperclip, X,
+  Paperclip, X, Pencil, Trash2,
 } from "lucide-react";
-import { Button, Card, Input, Badge } from "@/components/ui.jsx";
+import { Button, Card, Input, Badge, ConfirmDialog } from "@/components/ui.jsx";
+import EventFormModal from "@/components/EventFormModal.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as chatService from "@/services/chatService.js";
 import * as calendarService from "@/services/calendarService.js";
@@ -42,11 +43,24 @@ export default function Dashboard() {
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState(null);
-  const [title, setTitle] = useState("");
-  const [startTime, setStartTime] = useState("");
+  const [deletingEvent, setDeletingEvent] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deletePending, setDeletePending] = useState(false);
+
+  const [modalMode, setModalMode] = useState(null); // "create" | "edit" | null
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  const refreshEvents = async ({ silent = false } = {}) => {
+    try {
+      const fresh = await calendarService.getEvents(token);
+      setEvents(fresh);
+    } catch (e) {
+      if (!silent) setEventsError(e.message);
+    }
+  };
 
   useEffect(() => {
     if (!imageFile) {
@@ -117,12 +131,8 @@ export default function Dashboard() {
       );
       setMessages((m) => [...m, { role: "ai", text: response }]);
       // Buddy may have created/updated/deleted events via tool calling — refresh.
-      try {
-        const fresh = await calendarService.getEvents(token);
-        setEvents(fresh);
-      } catch {
-        // Non-fatal: chat reply already shown.
-      }
+      // Silent: chat reply is already shown; a refresh blip shouldn't paint a calendar error.
+      await refreshEvents({ silent: true });
     } catch (e) {
       setChatError(e.message);
       setMessages((m) => [...m, { role: "ai", text: `Błąd: ${e.message}` }]);
@@ -131,24 +141,30 @@ export default function Dashboard() {
     }
   };
 
-  const addEvent = async () => {
-    if (!title.trim() || !startTime.trim()) return;
-    setEventsError(null);
+  const confirmDelete = async () => {
+    if (!deletingEvent) return;
+    setDeletePending(true);
+    setDeleteError(null);
     try {
-      const start = new Date(startTime);
-      const end = new Date(start.getTime() + 60 * 60 * 1000);
-      const created = await calendarService.createEvent(token, {
-        title,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        event_type: "Custom",
-      });
-      setEvents((e) => [...e, created]);
-      setTitle("");
-      setStartTime("");
-    } catch (e) {
-      setEventsError(e.message);
+      await calendarService.deleteEvent(token, deletingEvent.id);
+      await refreshEvents();
+      setDeletingEvent(null);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeletePending(false);
     }
+  };
+
+  const handleEventSubmit = async (payload) => {
+    if (modalMode === "edit" && editingEvent) {
+      await calendarService.updateEvent(token, editingEvent.id, payload);
+    } else {
+      await calendarService.createEvent(token, payload);
+    }
+    await refreshEvents();
+    setModalMode(null);
+    setEditingEvent(null);
   };
 
   const handleLogout = () => {
@@ -267,7 +283,10 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground">Brak wydarzeń. Dodaj pierwsze poniżej.</p>
               )}
               {events.map((e) => (
-                <div key={e.id} className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 hover:border-primary/40">
+                <div
+                  key={e.id}
+                  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 hover:border-primary/40"
+                >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
                     <Clock className="h-4 w-4 text-primary" />
                   </div>
@@ -276,16 +295,58 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">{formatEventTime(e.start_time)}</p>
                   </div>
                   <Badge variant="secondary">{e.event_type || "—"}</Badge>
+                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => { setEditingEvent(e); setModalMode("edit"); }}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      aria-label={`Edytuj ${e.title}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setDeletingEvent(e); setDeleteError(null); }}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Usuń ${e.title}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-t border-border p-3">
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nowe wydarzenie…" />
-              <Input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-44" />
-              <Button onClick={addEvent} size="icon" variant="outline"><Plus className="h-4 w-4" /></Button>
+            <div className="border-t border-border p-3">
+              <Button
+                onClick={() => { setEditingEvent(null); setModalMode("create"); }}
+                variant="outline"
+                className="w-full"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Dodaj wydarzenie
+              </Button>
             </div>
           </Card>
         </div>
+
+        <ConfirmDialog
+          open={deletingEvent !== null}
+          title="Usunąć wydarzenie?"
+          description={deletingEvent ? `"${deletingEvent.title}" zostanie usunięte. Tej operacji nie można cofnąć.` : ""}
+          confirmLabel="Usuń"
+          confirmVariant="danger"
+          pending={deletePending}
+          error={deleteError}
+          onConfirm={confirmDelete}
+          onCancel={() => { setDeletingEvent(null); setDeleteError(null); }}
+        />
+        <EventFormModal
+          open={modalMode !== null}
+          mode={modalMode ?? "create"}
+          initialEvent={editingEvent}
+          onSubmit={handleEventSubmit}
+          onClose={() => { setModalMode(null); setEditingEvent(null); }}
+        />
       </main>
     </div>
   );
