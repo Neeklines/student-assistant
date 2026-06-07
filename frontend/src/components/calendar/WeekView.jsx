@@ -41,6 +41,19 @@ export default function WeekView({ events, currentDate, onEditEvent }) {
   const formatTime = (d) =>
     `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
+  const totalEventsInWeek = days.reduce(
+    (sum, d) => sum + eventsOnDate(events, d).length,
+    0,
+  );
+
+  if (totalEventsInWeek === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8">
+        <p className="text-sm text-muted-foreground">Brak wydarzeń w tym tygodniu. Dodaj pierwsze ↓</p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
       {/* Sticky header row: weekday names + date numbers */}

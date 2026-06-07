@@ -16,6 +16,16 @@ export default function MonthView({ events, currentDate, onEditEvent, onJumpToDa
 
   const currentMonth = currentDate.getMonth();
 
+  // Empty state: no events in any cell of the visible grid.
+  const totalEvents = cells.reduce((sum, d) => sum + eventsOnDate(events, d).length, 0);
+  if (totalEvents === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-8">
+        <p className="text-sm text-muted-foreground">Brak wydarzeń w tym miesiącu. Dodaj pierwsze ↓</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Day-names header */}
