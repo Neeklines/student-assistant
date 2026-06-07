@@ -295,6 +295,13 @@ export default function Dashboard() {
           initialEvent={editingEvent}
           onSubmit={handleEventSubmit}
           onClose={() => { setModalMode(null); setEditingEvent(null); }}
+          onDelete={() => {
+            if (!editingEvent) return;
+            setDeletingEvent(editingEvent);
+            setDeleteError(null);
+            setModalMode(null);
+            setEditingEvent(null);
+          }}
         />
       </main>
     </div>
