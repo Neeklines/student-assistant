@@ -8,6 +8,7 @@ import { Button, Card, Input, Badge, Label, Modal } from "@/components/ui.jsx";
 import heroImg from "@/assets/hero-ai-student.jpg";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as calendarService from "@/services/calendarService.js";
+import { loadGoogleIdentityScript } from "@/services/googleIdentityService.js";
 
 const STARTER_MESSAGES = [
   { role: "ai", text: "Cześć 👋 Jestem Buddy, Twój asystent AI do nauki. Co masz w planach na ten tydzień?" },
@@ -209,12 +210,14 @@ function CalendarPanel() {
 }
 
 function AuthDialog({ mode, onClose, onSwitch, onSuccess }) {
-  const { login, register } = useAuth();
+  const { login, register, googleLogin } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const googleButtonRef = useRef(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     setEmail("");
@@ -223,6 +226,52 @@ function AuthDialog({ mode, onClose, onSwitch, onSuccess }) {
     setError(null);
     setSubmitting(false);
   }, [mode]);
+
+  useEffect(() => {
+    if (!mode || !googleClientId || !googleButtonRef.current) return;
+
+    let cancelled = false;
+    googleButtonRef.current.innerHTML = "";
+
+    loadGoogleIdentityScript()
+      .then((google) => {
+        if (cancelled || !googleButtonRef.current) return;
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: async ({ credential }) => {
+            if (!credential) {
+              setError("Google nie zwrócił tokenu logowania.");
+              return;
+            }
+            setError(null);
+            setSubmitting(true);
+            try {
+              await googleLogin(credential);
+              onSuccess();
+            } catch (err) {
+              setError(err.message);
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        });
+        google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: "outline",
+          size: "large",
+          width: "100%",
+          text: mode === "login" ? "signin_with" : "signup_with",
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError("Nie udało się załadować logowania Google.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId, googleLogin, mode, onSuccess]);
 
   if (!mode) return null;
 
@@ -256,6 +305,20 @@ function AuthDialog({ mode, onClose, onSwitch, onSuccess }) {
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-secondary p-1">
         <button type="button" onClick={() => onSwitch("login")} className={`rounded-lg py-2 text-sm font-medium ${mode === "login" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Logowanie</button>
         <button type="button" onClick={() => onSwitch("register")} className={`rounded-lg py-2 text-sm font-medium ${mode === "register" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Rejestracja</button>
+      </div>
+      <div className="mb-4 space-y-3">
+        {googleClientId ? (
+          <div ref={googleButtonRef} className="min-h-10" />
+        ) : (
+          <Button type="button" variant="outline" disabled className="w-full">
+            Google login wymaga VITE_GOOGLE_CLIENT_ID
+          </Button>
+        )}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-border" />
+          <span>albo</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
       </div>
       <form onSubmit={handleSubmit} className="space-y-3">
         {mode === "register" && (
