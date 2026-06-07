@@ -8,6 +8,7 @@ pymysql
 passlib[argon2]
 python-jose[cryptography]
 python-dotenv
+tzdata
 openai
 python-multipart
 

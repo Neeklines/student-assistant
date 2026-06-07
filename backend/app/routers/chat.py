@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+import json
 from typing import Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.schemas.chat import ChatResponse
-from app.services.ai_agent import get_agent_response
+from app.services.ai_agent import get_agent_response, stream_agent_response
 from app.database import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -14,14 +17,7 @@ MAX_IMAGE_BYTES = 5 * 1024 * 1024
 ALLOWED_IMAGE_MIME = {"image/jpeg", "image/png", "image/webp"}
 
 
-@router.post("/", response_model=ChatResponse)
-async def chat_with_ai(
-    session_id: str = Form(...),
-    message: str = Form(""),
-    image: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
+async def _read_image(image: Optional[UploadFile]):
     image_bytes = None
     image_mime_type = None
     if image and image.filename:
@@ -37,6 +33,23 @@ async def chat_with_ai(
                 detail="Image too large. Max size is 5MB.",
             )
         image_mime_type = image.content_type
+    return image_bytes, image_mime_type
+
+
+def _sse(event: str, payload: dict) -> str:
+    data = json.dumps(payload, ensure_ascii=False)
+    return f"event: {event}\ndata: {data}\n\n"
+
+
+@router.post("/", response_model=ChatResponse)
+async def chat_with_ai(
+    session_id: str = Form(...),
+    message: str = Form(""),
+    image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    image_bytes, image_mime_type = await _read_image(image)
 
     try:
         reply = get_agent_response(
@@ -47,3 +60,35 @@ async def chat_with_ai(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/stream")
+async def stream_chat_with_ai(
+    session_id: str = Form(...),
+    message: str = Form(""),
+    image: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    image_bytes, image_mime_type = await _read_image(image)
+
+    def event_stream():
+        try:
+            for chunk in stream_agent_response(
+                current_user.id,
+                session_id,
+                message,
+                db,
+                image_bytes,
+                image_mime_type,
+            ):
+                yield _sse("chunk", {"text": chunk})
+            yield _sse("done", {})
+        except Exception as e:
+            yield _sse("error", {"detail": str(e)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
