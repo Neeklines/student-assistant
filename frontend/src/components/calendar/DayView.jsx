@@ -17,7 +17,12 @@ function eventPosition(event) {
   const windowStart = HOUR_START * 60;
   const windowEnd = (HOUR_END + 1) * 60; // include the trailing 60 min after 22:00 → up to 23:00
   const startMin = Math.max(minutesIntoDay(start), windowStart);
-  const endMin = Math.min(minutesIntoDay(end), windowEnd);
+  // If the event crosses midnight (end is the next day, so minutesIntoDay(end) < startMin),
+  // treat the end as the end of the current day window so the block doesn't render with
+  // negative height. Multi-day spanning bars are out of scope (see spec).
+  const rawEndMin = minutesIntoDay(end);
+  const effectiveEndMin = rawEndMin < startMin ? windowEnd : rawEndMin;
+  const endMin = Math.min(effectiveEndMin, windowEnd);
   const top = ((startMin - windowStart) / 60) * HOUR_HEIGHT;
   const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 24); // min visual height for very short events
   return { top, height };
