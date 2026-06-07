@@ -43,9 +43,6 @@ export default function Dashboard() {
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState(null);
-  const [title, setTitle] = useState("");
-  const [startTime, setStartTime] = useState("");
-
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deletePending, setDeletePending] = useState(false);
@@ -140,26 +137,6 @@ export default function Dashboard() {
       setMessages((m) => [...m, { role: "ai", text: `Błąd: ${e.message}` }]);
     } finally {
       setSending(false);
-    }
-  };
-
-  const addEvent = async () => {
-    if (!title.trim() || !startTime.trim()) return;
-    setEventsError(null);
-    try {
-      const start = new Date(startTime);
-      const end = new Date(start.getTime() + 60 * 60 * 1000);
-      const created = await calendarService.createEvent(token, {
-        title,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        event_type: "Custom",
-      });
-      setEvents((e) => [...e, created]);
-      setTitle("");
-      setStartTime("");
-    } catch (e) {
-      setEventsError(e.message);
     }
   };
 
@@ -338,10 +315,15 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-t border-border p-3">
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nowe wydarzenie…" />
-              <Input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-44" />
-              <Button onClick={addEvent} size="icon" variant="outline"><Plus className="h-4 w-4" /></Button>
+            <div className="border-t border-border p-3">
+              <Button
+                onClick={() => { setEditingEvent(null); setModalMode("create"); }}
+                variant="outline"
+                className="w-full"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Dodaj wydarzenie
+              </Button>
             </div>
           </Card>
         </div>
