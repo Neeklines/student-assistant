@@ -114,9 +114,6 @@ student-assistant/
 │   ├── requirements.txt
 │   └── .env.example
 │
-├── docs/
-│   └── ROADMAP.md            # what's next
-│
 ├── .github/workflows/        # CI
 ├── README.md
 ├── SCOPE.md
@@ -232,4 +229,4 @@ License: see [LICENSE](LICENSE).
 
 To contribute, see [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
 
-Current scope is defined in [SCOPE.md](SCOPE.md). Upcoming work is tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
+Current scope is defined in [SCOPE.md](SCOPE.md).
