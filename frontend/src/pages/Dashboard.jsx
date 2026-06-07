@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Sparkles, CalendarDays, Send, Plus, Bell, Clock, GraduationCap, LogOut, Home as HomeIcon,
+  Sparkles, CalendarDays, Send, Plus, Bell, GraduationCap, LogOut, Home as HomeIcon,
   Paperclip, X, Pencil, Trash2,
 } from "lucide-react";
-import { Button, Card, Input, Badge, ConfirmDialog } from "@/components/ui.jsx";
+import { Button, Card, Input, ConfirmDialog } from "@/components/ui.jsx";
+import { getEventTypeMeta } from "@/lib/eventTypes.js";
 import EventFormModal from "@/components/EventFormModal.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as chatService from "@/services/chatService.js";
@@ -282,39 +283,45 @@ export default function Dashboard() {
               {!eventsLoading && !eventsError && events.length === 0 && (
                 <p className="text-sm text-muted-foreground">Brak wydarzeń. Dodaj pierwsze poniżej.</p>
               )}
-              {events.map((e) => (
-                <div
-                  key={e.id}
-                  className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 hover:border-primary/40"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                    <Clock className="h-4 w-4 text-primary" />
+              {events.map((e) => {
+                const meta = getEventTypeMeta(e.event_type);
+                const Icon = meta.Icon;
+                return (
+                  <div
+                    key={e.id}
+                    className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 hover:border-primary/40"
+                  >
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${meta.iconClass}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{e.title}</p>
+                      <p className="text-xs text-muted-foreground">{formatEventTime(e.start_time)}</p>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.badgeClass}`}>
+                      {meta.label}
+                    </span>
+                    <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => { setEditingEvent(e); setModalMode("edit"); }}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        aria-label={`Edytuj ${e.title}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDeletingEvent(e); setDeleteError(null); }}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                        aria-label={`Usuń ${e.title}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{e.title}</p>
-                    <p className="text-xs text-muted-foreground">{formatEventTime(e.start_time)}</p>
-                  </div>
-                  <Badge variant="secondary">{e.event_type || "—"}</Badge>
-                  <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      type="button"
-                      onClick={() => { setEditingEvent(e); setModalMode("edit"); }}
-                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      aria-label={`Edytuj ${e.title}`}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setDeletingEvent(e); setDeleteError(null); }}
-                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                      aria-label={`Usuń ${e.title}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="border-t border-border p-3">
               <Button
