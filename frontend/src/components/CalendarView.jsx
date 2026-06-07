@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui.jsx";
 import DayView from "@/components/calendar/DayView.jsx";
+import WeekView from "@/components/calendar/WeekView.jsx";
 import {
   startOfWeek,
   endOfWeek,
@@ -120,13 +121,7 @@ export default function CalendarView({ events, onEditEvent }) {
         <DayView events={events} currentDate={currentDate} onEditEvent={onEditEvent} />
       )}
       {perspective === "week" && (
-        <div className="flex-1 overflow-auto p-4">
-          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            <p><strong>Tydzień</strong></p>
-            <p className="mt-1">Wydarzeń w zakresie: <strong>{visibleEvents.length}</strong></p>
-            <p className="mt-3 text-xs">WeekView dojedzie w kolejnym commicie (Task D).</p>
-          </div>
-        </div>
+        <WeekView events={events} currentDate={currentDate} onEditEvent={onEditEvent} />
       )}
       {perspective === "month" && (
         <div className="flex-1 overflow-auto p-4">
