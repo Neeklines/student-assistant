@@ -13,12 +13,31 @@ def _mock_completion(text: str, tool_calls=None):
     return completion
 
 
+def _mock_stream_event(content=None, tool_calls=None):
+    event = MagicMock()
+    delta = MagicMock()
+    delta.content = content
+    delta.tool_calls = tool_calls
+    event.choices = [MagicMock(delta=delta)]
+    return event
+
+
 def _tool_call(name: str, arguments: dict, call_id: str = "call_1"):
     tc = MagicMock()
     tc.id = call_id
     tc.function = MagicMock(name=name, arguments=json.dumps(arguments))
     tc.function.name = name
     return tc
+
+
+def _stream_tool_delta(name: str, arguments: dict, call_id: str = "call_1"):
+    tool_delta = MagicMock()
+    tool_delta.index = 0
+    tool_delta.id = call_id
+    tool_delta.function = MagicMock()
+    tool_delta.function.name = name
+    tool_delta.function.arguments = json.dumps(arguments)
+    return tool_delta
 
 
 def _register_and_login(client, email="chat@test.com", password="secret"):
@@ -58,6 +77,35 @@ def test_chat_text_only(client, db):
     ]
     assert all(r.user_id is not None for r in rows)
     assert all(r.created_at is not None for r in rows)
+
+
+def test_chat_stream_text_only(client, db):
+    token = _register_and_login(client, email="stream@test.com")
+
+    with patch("app.services.ai_agent.OpenAI") as openai_cls:
+        instance = openai_cls.return_value
+        instance.chat.completions.create.return_value = [
+            _mock_stream_event("Hel"),
+            _mock_stream_event("lo"),
+        ]
+
+        response = client.post(
+            "/api/chat/stream",
+            data={"session_id": "stream1", "message": "Hi Buddy"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert 'event: chunk\ndata: {"text": "Hel"}' in response.text
+    assert 'event: chunk\ndata: {"text": "lo"}' in response.text
+    assert "event: done" in response.text
+
+    rows = db.query(ChatMessage).order_by(ChatMessage.id).all()
+    assert [(r.role, r.content) for r in rows] == [
+        ("user", "Hi Buddy"),
+        ("assistant", "Hello"),
+    ]
 
 
 def test_chat_with_image(client, db):
@@ -146,6 +194,27 @@ def test_chat_history_isolated_per_user(client, db):
         assert "user B secret" in history_text
 
 
+def test_chat_includes_current_date_context(client):
+    token = _register_and_login(client, email="date@test.com")
+
+    with patch("app.services.ai_agent.OpenAI") as openai_cls:
+        instance = openai_cls.return_value
+        instance.chat.completions.create.return_value = _mock_completion("ok")
+
+        response = client.post(
+            "/api/chat/",
+            data={"session_id": "date1", "message": "Co mam zrobić jutro?"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    sent_messages = instance.chat.completions.create.call_args.kwargs["messages"]
+    system_message = sent_messages[0]["content"]
+    assert "Aktualna data i czas:" in system_message
+    assert "Europe/Warsaw" in system_message
+    assert '"dziś", "jutro"' in system_message
+
+
 def test_chat_tool_call_creates_calendar_event(client, db):
     """Model asks to create an event, gets the tool result, then replies in text."""
     token = _register_and_login(client, email="tools@test.com")
@@ -187,6 +256,47 @@ def test_chat_tool_call_creates_calendar_event(client, db):
         "messages"
     ]
     assert any(m.get("role") == "tool" for m in second_call_messages)
+
+
+def test_chat_stream_tool_call_creates_calendar_event(client, db):
+    token = _register_and_login(client, email="stream-tools@test.com")
+
+    create_args = {
+        "title": "Physics review",
+        "start_time": "2026-06-08T12:00:00",
+        "end_time": "2026-06-08T13:00:00",
+        "event_type": "study",
+    }
+
+    with patch("app.services.ai_agent.OpenAI") as openai_cls:
+        instance = openai_cls.return_value
+        instance.chat.completions.create.side_effect = [
+            [
+                _mock_stream_event(
+                    tool_calls=[_stream_tool_delta("create_event", create_args)]
+                )
+            ],
+            [_mock_stream_event("Dodałem "), _mock_stream_event("powtórkę.")],
+        ]
+
+        response = client.post(
+            "/api/chat/stream",
+            data={"session_id": "stream-tool1", "message": "Dodaj fizykę"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    assert 'event: chunk\ndata: {"text": "Dodałem "}' in response.text
+    assert 'event: chunk\ndata: {"text": "powtórkę."}' in response.text
+
+    events = db.query(CalendarEvent).all()
+    assert len(events) == 1
+    assert events[0].title == "Physics review"
+    assert events[0].created_by == "ai"
+
+    rows = db.query(ChatMessage).order_by(ChatMessage.id).all()
+    assert rows[-1].role == "assistant"
+    assert rows[-1].content == "Dodałem powtórkę."
 
 
 def test_chat_tool_error_does_not_crash(client, db):

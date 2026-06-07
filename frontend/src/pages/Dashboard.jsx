@@ -99,9 +99,11 @@ export default function Dashboard() {
     if (!userText && !imageFile) return;
     const attachedImage = imageFile;
     const attachedPreview = imagePreview;
+    const assistantMessageId = crypto.randomUUID();
     setMessages((m) => [
       ...m,
       { role: "user", text: userText, imageUrl: attachedPreview },
+      { id: assistantMessageId, role: "ai", text: "" },
     ]);
     setInput("");
     setImageFile(null);
@@ -110,18 +112,36 @@ export default function Dashboard() {
     setChatError(null);
     try {
       const sessionId = chatService.getOrCreateSessionId();
-      const { response } = await chatService.sendMessage(
+      await chatService.sendMessageStream(
         token,
         sessionId,
         userText,
         attachedImage,
+        {
+          onChunk: (chunk) => {
+            setMessages((m) =>
+              m.map((message) =>
+                message.id === assistantMessageId
+                  ? { ...message, text: `${message.text}${chunk}` }
+                  : message,
+              ),
+            );
+          },
+        },
       );
-      setMessages((m) => [...m, { role: "ai", text: response }]);
       // Buddy may have created/updated/deleted events via tool calling — refresh.
       // Silent: chat reply is already shown; a refresh blip shouldn't paint a calendar error.
       await refreshEvents({ silent: true });
     } catch (e) {
       setChatError(e.message);
+      return;
+      setMessages((m) =>
+        m.map((message) =>
+          message.id === assistantMessageId
+            ? { ...message, text: `Błąd: ${e.message}` }
+            : message,
+        ),
+      );
       setMessages((m) => [...m, { role: "ai", text: `Błąd: ${e.message}` }]);
     } finally {
       setSending(false);
@@ -201,7 +221,7 @@ export default function Dashboard() {
             </div>
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-5">
               {messages.map((m, i) => (
-                <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div key={m.id ?? i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] space-y-2 rounded-2xl px-4 py-2.5 text-sm ${m.role === "user" ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-secondary text-secondary-foreground rounded-bl-sm"}`}>
                     {m.imageUrl && (
                       <img src={m.imageUrl} alt="Załącznik" className="max-h-48 rounded-lg object-cover" />
