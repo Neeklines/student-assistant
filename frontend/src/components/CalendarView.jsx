@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui.jsx";
 import DayView from "@/components/calendar/DayView.jsx";
 import WeekView from "@/components/calendar/WeekView.jsx";
+import MonthView from "@/components/calendar/MonthView.jsx";
 import {
   startOfWeek,
   endOfWeek,
@@ -12,10 +13,6 @@ import {
   formatPolishWeekday,
   formatDayMonth,
   formatMonthYear,
-  eventsOnDate,
-  eventsInRange,
-  startOfMonth,
-  endOfMonth,
 } from "@/lib/calendarDates.js";
 
 const TABS = [
@@ -69,15 +66,10 @@ export default function CalendarView({ events, onEditEvent }) {
 
   const goToday = () => setCurrentDate(new Date());
 
-  // Pre-filter events for the placeholder body's count. Real views will filter themselves.
-  let visibleEvents = [];
-  if (perspective === "day") {
-    visibleEvents = eventsOnDate(events, currentDate);
-  } else if (perspective === "week") {
-    visibleEvents = eventsInRange(events, startOfWeek(currentDate), endOfWeek(currentDate));
-  } else {
-    visibleEvents = eventsInRange(events, startOfMonth(currentDate), endOfMonth(currentDate));
-  }
+  const jumpToDay = (date) => {
+    setCurrentDate(date);
+    setPerspective("day");
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -124,13 +116,12 @@ export default function CalendarView({ events, onEditEvent }) {
         <WeekView events={events} currentDate={currentDate} onEditEvent={onEditEvent} />
       )}
       {perspective === "month" && (
-        <div className="flex-1 overflow-auto p-4">
-          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            <p><strong>Miesiąc</strong></p>
-            <p className="mt-1">Wydarzeń w zakresie: <strong>{visibleEvents.length}</strong></p>
-            <p className="mt-3 text-xs">MonthView dojedzie w kolejnym commicie (Task E).</p>
-          </div>
-        </div>
+        <MonthView
+          events={events}
+          currentDate={currentDate}
+          onEditEvent={onEditEvent}
+          onJumpToDay={jumpToDay}
+        />
       )}
     </div>
   );
