@@ -3,6 +3,7 @@
 # direct / indirect that should be declared
 fastapi
 sqlalchemy
+alembic
 pymysql
 passlib[argon2]
 python-jose[cryptography]

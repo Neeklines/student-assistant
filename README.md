@@ -81,6 +81,7 @@ graph TD
 
 **Tooling**
 * `pip-tools` for dependency pinning
+* Alembic for database migrations
 * `black` + `flake8` for Python quality
 * `pytest` for backend tests
 * GitHub Actions for CI
@@ -144,6 +145,7 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env       # then edit values, especially OPENAI_API_KEY
+alembic upgrade head        # create/update the local database schema
 uvicorn app.main:app --reload
 ```
 
@@ -154,6 +156,20 @@ http://localhost:8000
 ```
 
 OpenAPI docs: `http://localhost:8000/docs`
+
+### Database Migrations
+
+Run migrations from `backend/`:
+
+```bash id="migration-upgrade"
+alembic upgrade head
+```
+
+After changing SQLAlchemy models, create a new migration and review it before committing:
+
+```bash id="migration-create"
+alembic revision --autogenerate -m "Describe schema change"
+```
 
 ---
 
