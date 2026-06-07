@@ -61,6 +61,14 @@ export default function EventFormModal({ open, mode, initialEvent, onSubmit, onC
       setFormError("Tytuł nie może być pusty");
       return;
     }
+    if (!form.start_time) {
+      setFormError("Wybierz datę i godzinę rozpoczęcia");
+      return;
+    }
+    if (!form.end_time) {
+      setFormError("Wybierz datę i godzinę zakończenia");
+      return;
+    }
     const startIso = localInputToIso(form.start_time);
     const endIso = localInputToIso(form.end_time);
     if (new Date(endIso) <= new Date(startIso)) {
@@ -129,6 +137,7 @@ export default function EventFormModal({ open, mode, initialEvent, onSubmit, onC
               type="datetime-local"
               value={form.start_time}
               onChange={update("start_time")}
+              required
             />
           </div>
           <div className="space-y-1">
@@ -138,6 +147,7 @@ export default function EventFormModal({ open, mode, initialEvent, onSubmit, onC
               type="datetime-local"
               value={form.end_time}
               onChange={update("end_time")}
+              required
             />
           </div>
         </div>
@@ -156,7 +166,7 @@ export default function EventFormModal({ open, mode, initialEvent, onSubmit, onC
           </select>
         </div>
 
-        {formError && <p className="text-sm text-red-600">{formError}</p>}
+        {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
