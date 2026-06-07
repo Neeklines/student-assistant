@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 export function Button({ className, variant = "default", size = "md", style, ...props }) {
@@ -72,7 +73,16 @@ export function Badge({ className, variant = "default", ...props }) {
   );
 }
 
-export function Modal({ open, onClose, children }) {
+export function Modal({ open, onClose, children, labelledBy }) {
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div
@@ -80,6 +90,9 @@ export function Modal({ open, onClose, children }) {
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
         className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
