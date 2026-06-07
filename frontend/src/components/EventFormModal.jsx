@@ -38,7 +38,7 @@ function formFromEvent(event) {
   };
 }
 
-export default function EventFormModal({ open, mode, initialEvent, onSubmit, onClose }) {
+export default function EventFormModal({ open, mode, initialEvent, onSubmit, onClose, onDelete }) {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -167,13 +167,28 @@ export default function EventFormModal({ open, mode, initialEvent, onSubmit, onC
 
         {formError && <p role="alert" className="text-sm text-red-600">{formError}</p>}
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
-            Anuluj
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? "Zapisuję…" : mode === "edit" ? "Zapisz zmiany" : "Dodaj"}
-          </Button>
+        <div className="flex items-center justify-between pt-2">
+          <div>
+            {mode === "edit" && onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onDelete}
+                disabled={submitting}
+                className="text-red-600 hover:bg-red-50"
+              >
+                Usuń
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
+              Anuluj
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Zapisuję…" : mode === "edit" ? "Zapisz zmiany" : "Dodaj"}
+            </Button>
+          </div>
         </div>
       </form>
     </Modal>
