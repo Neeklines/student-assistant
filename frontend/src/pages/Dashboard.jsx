@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Sparkles, Send, Plus, GraduationCap, LogOut, Home as HomeIcon,
-  Paperclip, X,
+  MessageSquarePlus, Paperclip, X,
 } from "lucide-react";
 import { Button, Card, Input, ConfirmDialog } from "@/components/ui.jsx";
 import EventFormModal from "@/components/EventFormModal.jsx";
@@ -13,6 +13,10 @@ import * as calendarService from "@/services/calendarService.js";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const STARTER_MESSAGE = {
+  role: "ai",
+  text: "Cześć! Co masz dziś na głowie? Mogę zaplanować Twój tydzień.",
+};
 
 export default function Dashboard() {
   const { user, token, logout } = useAuth();
@@ -76,6 +80,15 @@ export default function Dashboard() {
   const clearImage = () => {
     setImageFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const startNewChat = () => {
+    if (sending) return;
+    chatService.resetSessionId();
+    setMessages([STARTER_MESSAGE]);
+    setInput("");
+    setChatError(null);
+    clearImage();
   };
 
   useEffect(() => {
@@ -218,6 +231,19 @@ export default function Dashboard() {
                 <p className="text-sm font-semibold text-foreground">Buddy</p>
                 <p className="text-xs text-muted-foreground">Asystent AI · online</p>
               </div>
+            </div>
+            <div className="flex justify-end border-b border-border px-3 py-2">
+              <Button
+                onClick={startNewChat}
+                disabled={sending}
+                size="sm"
+                variant="ghost"
+                title="Nowy chat"
+                aria-label="Nowy chat"
+              >
+                <MessageSquarePlus className="mr-2 h-4 w-4" />
+                Nowy chat
+              </Button>
             </div>
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-5">
               {messages.map((m, i) => (
