@@ -101,3 +101,42 @@ export function Modal({ open, onClose, children, labelledBy }) {
     </div>
   );
 }
+
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel = "Potwierdź",
+  cancelLabel = "Anuluj",
+  confirmVariant = "default",
+  pending = false,
+  error = null,
+  onConfirm,
+  onCancel,
+}) {
+  const titleId = "confirm-dialog-title";
+  return (
+    <Modal open={open} onClose={pending ? undefined : onCancel} labelledBy={titleId}>
+      <h2 id={titleId} className="text-lg font-semibold text-foreground">{title}</h2>
+      {description && (
+        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+      )}
+      {error && (
+        <p className="mt-3 text-sm text-red-600">{error}</p>
+      )}
+      <div className="mt-5 flex justify-end gap-2">
+        <Button variant="ghost" onClick={onCancel} disabled={pending}>
+          {cancelLabel}
+        </Button>
+        <Button
+          variant={confirmVariant === "danger" ? "default" : confirmVariant}
+          className={confirmVariant === "danger" ? "bg-red-600 text-white hover:bg-red-700" : undefined}
+          onClick={onConfirm}
+          disabled={pending}
+        >
+          {pending ? "..." : confirmLabel}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
