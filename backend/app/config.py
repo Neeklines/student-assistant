@@ -7,7 +7,7 @@ ENV = os.getenv("ENV", "dev")
 
 # Database
 MYSQL_URL = os.getenv("MYSQL_URL", "mysql+pymysql://user:password@localhost/demo_db")
-SQLITE_URL = "sqlite:///./local.db"
+SQLITE_URL = os.getenv("SQLITE_URL", "sqlite:///./local.db")
 
 # Auth
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
