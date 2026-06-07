@@ -5,6 +5,7 @@ import {
   Paperclip, X, Pencil, Trash2,
 } from "lucide-react";
 import { Button, Card, Input, Badge, ConfirmDialog } from "@/components/ui.jsx";
+import EventFormModal from "@/components/EventFormModal.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as chatService from "@/services/chatService.js";
 import * as calendarService from "@/services/calendarService.js";
@@ -48,6 +49,9 @@ export default function Dashboard() {
   const [deletingEvent, setDeletingEvent] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
   const [deletePending, setDeletePending] = useState(false);
+
+  const [modalMode, setModalMode] = useState(null); // "create" | "edit" | null
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -172,6 +176,17 @@ export default function Dashboard() {
     } finally {
       setDeletePending(false);
     }
+  };
+
+  const handleEventSubmit = async (payload) => {
+    if (modalMode === "edit" && editingEvent) {
+      await calendarService.updateEvent(token, editingEvent.id, payload);
+    } else {
+      await calendarService.createEvent(token, payload);
+    }
+    await refreshEvents();
+    setModalMode(null);
+    setEditingEvent(null);
   };
 
   const handleLogout = () => {
@@ -305,6 +320,14 @@ export default function Dashboard() {
                   <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <button
                       type="button"
+                      onClick={() => { setEditingEvent(e); setModalMode("edit"); }}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      aria-label={`Edytuj ${e.title}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => { setDeletingEvent(e); setDeleteError(null); }}
                       className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-600"
                       aria-label={`Usuń ${e.title}`}
@@ -333,6 +356,13 @@ export default function Dashboard() {
           error={deleteError}
           onConfirm={confirmDelete}
           onCancel={() => { setDeletingEvent(null); setDeleteError(null); }}
+        />
+        <EventFormModal
+          open={modalMode !== null}
+          mode={modalMode ?? "create"}
+          initialEvent={editingEvent}
+          onSubmit={handleEventSubmit}
+          onClose={() => { setModalMode(null); setEditingEvent(null); }}
         />
       </main>
     </div>
