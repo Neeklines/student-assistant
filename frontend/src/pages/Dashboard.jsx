@@ -7,6 +7,7 @@ import {
 import { Button, Card, Input, ConfirmDialog } from "@/components/ui.jsx";
 import EventFormModal from "@/components/EventFormModal.jsx";
 import CalendarView from "@/components/CalendarView.jsx";
+import ChatMarkdown from "@/components/ChatMarkdown.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as chatService from "@/services/chatService.js";
 import * as calendarService from "@/services/calendarService.js";
@@ -252,7 +253,9 @@ export default function Dashboard() {
                     {m.imageUrl && (
                       <img src={m.imageUrl} alt="Załącznik" className="max-h-48 rounded-lg object-cover" />
                     )}
-                    {m.text && <div>{m.text}</div>}
+                    {m.text && (m.role === "ai"
+                      ? <ChatMarkdown>{m.text}</ChatMarkdown>
+                      : <div className="whitespace-pre-wrap">{m.text}</div>)}
                   </div>
                 </div>
               ))}
