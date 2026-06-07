@@ -53,12 +53,12 @@ export default function Dashboard() {
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const refreshEvents = async () => {
+  const refreshEvents = async ({ silent = false } = {}) => {
     try {
       const fresh = await calendarService.getEvents(token);
       setEvents(fresh);
     } catch (e) {
-      setEventsError(e.message);
+      if (!silent) setEventsError(e.message);
     }
   };
 
@@ -131,7 +131,8 @@ export default function Dashboard() {
       );
       setMessages((m) => [...m, { role: "ai", text: response }]);
       // Buddy may have created/updated/deleted events via tool calling — refresh.
-      await refreshEvents();
+      // Silent: chat reply is already shown; a refresh blip shouldn't paint a calendar error.
+      await refreshEvents({ silent: true });
     } catch (e) {
       setChatError(e.message);
       setMessages((m) => [...m, { role: "ai", text: `Błąd: ${e.message}` }]);

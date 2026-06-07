@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { cn } from "@/lib/utils";
 
 export function Button({ className, variant = "default", size = "md", style, ...props }) {
@@ -114,7 +114,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }) {
-  const titleId = "confirm-dialog-title";
+  const titleId = useId();
   return (
     <Modal open={open} onClose={pending ? undefined : onCancel} labelledBy={titleId}>
       <h2 id={titleId} className="text-lg font-semibold text-foreground">{title}</h2>
@@ -122,7 +122,7 @@ export function ConfirmDialog({
         <p className="mt-2 text-sm text-muted-foreground">{description}</p>
       )}
       {error && (
-        <p className="mt-3 text-sm text-red-600">{error}</p>
+        <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>
       )}
       <div className="mt-5 flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel} disabled={pending}>
