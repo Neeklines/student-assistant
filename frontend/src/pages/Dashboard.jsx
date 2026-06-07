@@ -8,6 +8,7 @@ import { Button, Card, Input, ConfirmDialog } from "@/components/ui.jsx";
 import EventFormModal from "@/components/EventFormModal.jsx";
 import CalendarView from "@/components/CalendarView.jsx";
 import ChatMarkdown from "@/components/ChatMarkdown.jsx";
+import OnboardingHints from "@/components/OnboardingHints.jsx";
 import { useAuth } from "@/context/AuthContext.jsx";
 import * as chatService from "@/services/chatService.js";
 import * as calendarService from "@/services/calendarService.js";
@@ -221,6 +222,8 @@ export default function Dashboard() {
           <Card className="p-5"><p className="text-sm text-muted-foreground">Sesje nauki</p><p className="mt-1 text-3xl font-bold text-foreground">—</p></Card>
           <Card className="p-5"><p className="text-sm text-muted-foreground">Najbliższy deadline</p><p className="mt-1 text-3xl font-bold text-foreground">—</p></Card>
         </div>
+
+        {!eventsLoading && !eventsError && events.length === 0 && <OnboardingHints />}
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="flex h-[560px] flex-col overflow-hidden" style={{ boxShadow: "var(--shadow-card)" }}>
