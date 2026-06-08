@@ -333,3 +333,24 @@ def test_chat_tool_error_does_not_crash(client, db):
     ]
     tool_msg = next(m for m in second_call_messages if m.get("role") == "tool")
     assert "end_time must be after start_time" in tool_msg["content"]
+
+
+def test_chat_system_prompt_has_travel_and_summary_rules(client):
+    token = _register_and_login(client, email="buffer@test.com")
+
+    with patch("app.services.ai_agent.OpenAI") as openai_cls:
+        instance = openai_cls.return_value
+        instance.chat.completions.create.return_value = _mock_completion("ok")
+
+        response = client.post(
+            "/api/chat/",
+            data={"session_id": "buffer1", "message": "Zaplanuj mi jutro"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert response.status_code == 200
+    sent_messages = instance.chat.completions.create.call_args.kwargs["messages"]
+    system_message = sent_messages[0]["content"]
+    assert "dojazd" in system_message.lower()
+    assert "NIGDY nie twórz" in system_message
+    assert "podsumuj konkretnie" in system_message
