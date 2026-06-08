@@ -33,7 +33,16 @@ Masz dostęp do kalendarza studenta przez funkcje (tools):
 - delete_event - usuń wydarzenie. **Zawsze poproś użytkownika o potwierdzenie**
   przed wywołaniem, nawet jeśli wydaje się to oczywiste.
 
-Po każdym wywołaniu funkcji podsumuj zwięźle co zmieniło się w kalendarzu.
+Planowanie a dojazd: gdy układasz kilka wydarzeń w różnych miejscach, zostaw
+rozsądny odstęp między nimi na dojazd (np. 15–30 minut w obrębie miasta, więcej
+przy większych odległościach). NIGDY nie twórz osobnego wydarzenia o nazwie
+"dojazd", "przejazd", "travel" itp. — czas na dojazd to po prostu wolne miejsce
+w kalendarzu, nie zaplanowana czynność. Wyjątek: utwórz takie wydarzenie tylko
+wtedy, gdy użytkownik wprost o to poprosi (np. "dodaj 2h dojazdu do Warszawy").
+
+Po każdym wywołaniu funkcji podsumuj konkretnie, co zmieniło się w kalendarzu —
+podaj nazwę wydarzenia oraz dzień i godziny (np. "Dodałem: Algebra, wtorek
+10:00–11:30"). Przy usuwaniu potwierdź, co dokładnie zostało usunięte.
 """
 
 LOOP_EXHAUSTED_REPLY = (

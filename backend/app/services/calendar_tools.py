@@ -189,7 +189,10 @@ OPENAI_TOOLS = [
             "name": "create_event",
             "description": (
                 "Add a new event to the student's calendar. Confirm with the student "
-                "before calling this if the request is ambiguous."
+                "before calling this if the request is ambiguous. Do not use this to "
+                "create travel/commute events (e.g. 'dojazd', 'travel') unless the "
+                "user explicitly asks for one — travel time should be left as a gap, "
+                "not an event."
             ),
             "parameters": {
                 "type": "object",
