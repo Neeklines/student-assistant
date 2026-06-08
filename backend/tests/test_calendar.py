@@ -70,6 +70,39 @@ def test_calendar_update(client):
     assert res.json()["title"] == "New title"
 
 
+def test_calendar_rejects_invalid_time_range(client):
+    token = _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    payload = _make_event_payload(title="Backwards")
+    payload["end_time"] = payload["start_time"]
+
+    res = client.post("/api/calendar/events", json=payload, headers=headers)
+
+    assert res.status_code == 422
+    assert res.json()["detail"] == "end_time must be after start_time"
+
+
+def test_calendar_update_rejects_invalid_time_range(client):
+    token = _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    created = client.post(
+        "/api/calendar/events",
+        json=_make_event_payload(title="Valid"),
+        headers=headers,
+    ).json()
+
+    payload = _make_event_payload(title="Invalid")
+    payload["end_time"] = payload["start_time"]
+    res = client.put(
+        f"/api/calendar/events/{created['id']}",
+        json=payload,
+        headers=headers,
+    )
+
+    assert res.status_code == 422
+    assert res.json()["detail"] == "end_time must be after start_time"
+
+
 def test_calendar_delete(client, db):
     token = _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

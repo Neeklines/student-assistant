@@ -150,7 +150,6 @@ export default function Dashboard() {
       await refreshEvents({ silent: true });
     } catch (e) {
       setChatError(e.message);
-      return;
       setMessages((m) =>
         m.map((message) =>
           message.id === assistantMessageId
@@ -158,7 +157,6 @@ export default function Dashboard() {
             : message,
         ),
       );
-      setMessages((m) => [...m, { role: "ai", text: `Błąd: ${e.message}` }]);
     } finally {
       setSending(false);
     }

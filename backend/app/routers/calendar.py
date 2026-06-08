@@ -10,6 +10,19 @@ from app.schemas.calendar_event import CalendarEventCreate, CalendarEventRead
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
 
+def _validate_event_times(event: CalendarEventCreate) -> None:
+    try:
+        invalid_range = event.end_time <= event.start_time
+    except TypeError:
+        raise HTTPException(
+            status_code=422,
+            detail="start_time and end_time must use the same timezone format",
+        )
+
+    if invalid_range:
+        raise HTTPException(status_code=422, detail="end_time must be after start_time")
+
+
 @router.get("/events", response_model=list[CalendarEventRead])
 def get_events(
     db: Session = Depends(get_db),
@@ -29,6 +42,7 @@ def create_event(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _validate_event_times(event)
     db_event = CalendarEvent(user_id=current_user.id, **event.model_dump())
 
     db.add(db_event)
@@ -57,6 +71,7 @@ def update_event(
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
 
+    _validate_event_times(updated_event)
     data = updated_event.model_dump()
 
     for key, value in data.items():

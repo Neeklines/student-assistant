@@ -11,9 +11,9 @@ function isoToLocalInput(iso) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// "YYYY-MM-DDTHH:mm" (local) → ISO UTC.
+// Keep the datetime-local value as local wall time; the backend stores naive local datetimes.
 function localInputToIso(local) {
-  return new Date(local).toISOString();
+  return local.length === 16 ? `${local}:00` : local;
 }
 
 function emptyForm() {
