@@ -18,6 +18,15 @@ MODEL = "gpt-4o-mini"
 MAX_TOOL_ITERATIONS = 5
 APP_TIMEZONE = ZoneInfo("Europe/Warsaw")
 
+IMAGE_SCHEDULE_INSTRUCTION = """
+Jeśli załączony obraz wygląda jak plan zajęć, siatka lekcji albo screenshot z
+harmonogramem, najpierw odczytaj go jak tabelę. Zwróć uwagę na dni tygodnia,
+godziny rozpoczęcia i zakończenia, nazwy przedmiotów, typ zajęć, sale, prowadzących
+i grupy. Nie zgaduj pól, które są nieczytelne: oznacz je jako niepewne i dopytaj.
+Zanim dodasz wydarzenia do kalendarza z takiego obrazu, pokaż rozpoznaną listę
+pozycji i poproś użytkownika o potwierdzenie.
+"""
+
 SYSTEM_INSTRUCTION = """
 Jesteś osobistym asystentem studenta ds. produktywności i układania planu dnia.
 Pomagaj ustalać realistyczny harmonogram, uwzględniaj przerwy na jedzenie,
@@ -82,13 +91,18 @@ def _build_user_content(
 
     mime = image_mime_type or "image/jpeg"
     b64 = base64.b64encode(image_bytes).decode("ascii")
-    parts = []
+    parts = [
+        {
+            "type": "text",
+            "text": IMAGE_SCHEDULE_INSTRUCTION.strip(),
+        }
+    ]
     if text:
         parts.append({"type": "text", "text": text})
     parts.append(
         {
             "type": "image_url",
-            "image_url": {"url": f"data:{mime};base64,{b64}"},
+            "image_url": {"url": f"data:{mime};base64,{b64}", "detail": "high"},
         }
     )
     return parts

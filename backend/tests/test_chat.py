@@ -131,9 +131,11 @@ def test_chat_with_image(client, db):
         assert user_msg["role"] == "user"
         parts = user_msg["content"]
         assert isinstance(parts, list)
-        assert any(p.get("type") == "text" for p in parts)
+        text_parts = [p for p in parts if p.get("type") == "text"]
+        assert any("plan zajęć" in p.get("text", "") for p in text_parts)
         image_part = next(p for p in parts if p.get("type") == "image_url")
         assert image_part["image_url"]["url"].startswith("data:image/png;base64,")
+        assert image_part["image_url"]["detail"] == "high"
 
 
 def test_chat_rejects_unsupported_image_type(client):
