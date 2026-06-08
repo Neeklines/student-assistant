@@ -14,7 +14,7 @@ from app.services.calendar_tools import OPENAI_TOOLS, TOOL_FUNCTIONS
 
 load_dotenv()
 
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-5.4"
 MAX_TOOL_ITERATIONS = 5
 APP_TIMEZONE = ZoneInfo("Europe/Warsaw")
 

@@ -69,6 +69,7 @@ def test_chat_text_only(client, db):
 
     assert response.status_code == 200
     assert response.json() == {"response": "Hello back!"}
+    assert instance.chat.completions.create.call_args.kwargs["model"] == "gpt-5.4"
 
     rows = db.query(ChatMessage).order_by(ChatMessage.id).all()
     assert [(r.role, r.content) for r in rows] == [
