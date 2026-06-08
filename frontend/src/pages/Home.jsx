@@ -16,7 +16,7 @@ const STARTER_MESSAGES = [
 
 const FEATURES = [
   { icon: MessageCircle, title: "Planowanie przez rozmowę", desc: "Po prostu powiedz Buddy'emu, co Cię czeka — egzaminy, eseje, spotkania koła naukowego — a on ułoży Twój tydzień." },
-  { icon: CalendarDays, title: "Synchronizacja kalendarza", desc: "Czyta Twój Google Calendar i sam dopisuje bloki nauki oraz przypomnienia." },
+  { icon: CalendarDays, title: "Kalendarz Studybuddy", desc: "Zbiera zajęcia, naukę i terminy w jednym widoku, a Buddy może dopisywać plan przez rozmowę." },
   { icon: BookOpen, title: "Bloki nauki", desc: "Inteligentne sesje focusu z przerwami, dopasowane do Twoich zajęć." },
   { icon: Bell, title: "Radar terminów", desc: "Nie przegapisz deadline'u — Buddy przypomni Ci wieczorem dzień wcześniej i poda checklistę." },
   { icon: GraduationCap, title: "Stworzone dla studentów", desc: "Rozumie semestry, sylabusy i chaos projektów grupowych." },
@@ -35,6 +35,20 @@ function formatEventTime(isoString) {
   } catch {
     return isoString;
   }
+}
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+function localInputToIso(local) {
+  return local.length === 16 ? `${local}:00` : local;
+}
+
+function addHoursToLocalInput(local, hours) {
+  const d = new Date(local);
+  d.setHours(d.getHours() + hours);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function Hero({ onAuth }) {
@@ -61,12 +75,12 @@ function Hero({ onAuth }) {
               Zacznij rozmowę za darmo
             </Button>
             <Button size="lg" variant="outline" onClick={() => onAuth("login")}>
-              <CalendarDays className="mr-2 h-4 w-4" /> Połącz kalendarz
+              <CalendarDays className="mr-2 h-4 w-4" /> Zobacz kalendarz
             </Button>
           </div>
           <div className="mt-8 flex items-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Bez karty</div>
-            <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Działa z Google Calendar</div>
+            <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Działa w przeglądarce</div>
           </div>
         </div>
         <div className="relative">
@@ -145,13 +159,12 @@ function CalendarPanel() {
     if (!token) { setError("Zaloguj się, by dodać wydarzenie"); return; }
     setError(null);
     try {
-      const start = new Date(startTime);
-      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      const endTime = addHoursToLocalInput(startTime, 1);
       const created = await calendarService.createEvent(token, {
         title,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-        event_type: "Custom",
+        start_time: localInputToIso(startTime),
+        end_time: localInputToIso(endTime),
+        event_type: "custom",
       });
       setEvents((e) => [...e, created]);
       setTitle("");

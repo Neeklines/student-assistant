@@ -210,8 +210,9 @@ OPENAI_TOOLS = [
                     "event_type": {
                         "type": "string",
                         "description": (
-                            "Free-form category, e.g. 'study', 'lecture', 'exam', "
-                            "'meeting', 'break'."
+                            "Daily planning category. Prefer one of: 'lecture' "
+                            "(classes), 'study', 'task', 'deadline', 'meeting', "
+                            "'work', 'personal', 'health', 'break', 'custom'."
                         ),
                     },
                     "priority": {
